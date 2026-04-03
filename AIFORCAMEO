@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI发动机测试控制系统 - CAMEO 4R2 & PUMA OPEN 1.5.3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --danger: #dc2626;
+            --warning: #ea580c;
+            --success: #16a34a;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-panel: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* 头部样式 */
+        .header {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-panel) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .logo-text h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--text-primary) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* 系统状态指示器 */
+        .system-status {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-panel);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .status-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+            position: relative;
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .status-dot.connecting {
+            background: var(--warning);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 主布局 */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        @media (max-width: 1200px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 面板样式 */
+        .panel {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 20px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        /* 控制面板 */
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 输入样式 */
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        textarea, input, select {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, #b91c1c 100%);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-secondary {
+            background: var(--bg-panel);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--border);
+        }
+
+        /* 快速预设 */
+        .preset-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .preset-tag {
+            padding: 6px 12px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .preset-tag:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* 实时数据面板 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-card) 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
+        .metric-card.warning::before {
+            background: var(--warning);
+        }
+
+        .metric-card.critical::before {
+            background: var(--danger);
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .metric-unit {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-left: 4px;
+        }
+
+        .metric-trend {
+            font-size: 0.8rem;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+
+        /* 图表容器 */
+        .chart-container {
+            background: var(--bg-panel);
+            border-radius: 12px;
+            padding: 20px;
+            height: 350px;
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .chart-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 进度条 */
+        .progress-section {
+            margin: 20px 0;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-panel);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* 日志区域 */
+        .log-container {
+            background: #0d1117;
+            border-radius: 12px;
+            padding: 15px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            padding: 6px 0;
+            border-left: 3px solid transparent;
+            padding-left: 12px;
+            margin-bottom: 4px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-entry.info { border-left-color: var(--primary); }
+        .log-entry.success { border-left-color: var(--success); }
+        .log-entry.warning { border-left-color: var(--warning); }
+        .log-entry.error { border-left-color: var(--danger); }
+        .log-entry.ai { border-left-color: var(--secondary); }
+
+        .log-time {
+            color: #6b7280;
+            margin-right: 10px;
+        }
+
+        .log-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-right: 10px;
+            font-weight: 600;
+        }
+
+        .log-tag.ai { background: rgba(124, 58, 237, 0.2); color: #a78bfa; }
+        .log-tag.cameo { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+        .log-tag.puma { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
+        .log-tag.inca { background: rgba(234, 88, 12, 0.2); color: #fb923c; }
+        .log-tag.safety { background: rgba(220, 38, 38, 0.2); color: #f87171; }
+
+        /* 结果表格 */
+        .results-panel {
+            margin-top: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table th {
+            background: var(--bg-panel);
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        .data-table tr:hover {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-pending { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+        .badge-running { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+        .badge-completed { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
+        .badge-failed { background: rgba(220, 38, 38, 0.2); color: #f87171; }
+
+        /* 警报横幅 */
+        .alert-banner {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 400px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            transform: translateX(450px);
+            transition: transform 0.3s ease;
+            border-left: 4px solid;
+        }
+
+        .alert-banner.show {
+            transform: translateX(0);
+        }
+
+        .alert-banner.critical {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            border-left-color: #fca5a5;
+        }
+
+        .alert-banner.warning {
+            background: linear-gradient(135deg, #ea580c 0%, #9a3412 100%);
+            border-left-color: #fdba74;
+        }
+
+        .alert-banner.success {
+            background: linear-gradient(135deg, #16a34a 0%, #166534 100%);
+            border-left-color: #86efac;
+        }
+
+        .alert-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .alert-close:hover { opacity: 1; }
+
+        /* 动画 */
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 连接配置模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .metric-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 警报横幅 -->
+    <div class="alert-banner" id="alertBanner">
+        <button class="alert-close" onclick="hideAlert()">✕</button>
+        <div id="alertContent"></div>
+    </div>
+
+    <!-- 连接配置模态框 -->
+    <div class="modal-overlay" id="configModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🔧 系统连接配置</h3>
+                <button class="btn-secondary" style="width: auto; padding: 8px 12px;" onclick="toggleConfig()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>CAMEO 4R2 主机地址</label>
+                    <input type="text" id="cameoHost" value="localhost" placeholder="例如: 192.168.1.100">
+                </div>
+                <div class="input-group">
+                    <label>PUMA OPEN 1.5.3 主机地址</label>
+                    <input type="text" id="pumaHost" value="192.168.1.101" placeholder="例如: 192.168.1.101">
+                </div>
+                <div class="input-group">
+                    <label>INCA 主机地址</label>
+                    <input type="text" id="incaHost" value="localhost" placeholder="例如: localhost">
+                </div>
+                <div class="input-group">
+                    <label>WebSocket 端口</label>
+                    <input type="number" id="wsPort" value="8000" placeholder="8000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="toggleConfig()" style="width: auto;">取消</button>
+                <button class="btn btn-primary" onclick="saveConfig()" style="width: auto;">保存并连接</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 头部 -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">🚀</div>
+                    <div class="logo-text">
+                        <h1>AI发动机测试控制系统</h1>
+                        <p>云端智能控制 · CAMEO 4R2 · PUMA OPEN 1.5.3</p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div class="system-status">
+                        <div class="status-item" id="wsStatusItem">
+                            <div class="status-dot" id="wsDot"></div>
+                            <span>WebSocket</span>
+                        </div>
+                        <div class="status-item" id="cameoStatusItem">
+                            <div class="status-dot" id="cameoDot"></div>
+                            <span>CAMEO 4R2</span>
+                        </div>
+                        <div class="status-item" id="pumaStatusItem">
+                            <div class="status-dot" id="pumaDot"></div>
+                            <span>PUMA OPEN</span>
+                        </div>
+                        <div class="status-item" id="incaStatusItem">
+                            <div class="status-dot" id="incaDot"></div>
+                            <span>INCA</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="width: auto; padding: 8px 16px;" onclick="toggleConfig()">
+                        ⚙️ 配置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容 -->
+    <div class="container">
+        <div class="main-layout">
+            <!-- 左侧控制面板 -->
+            <div class="left-panel">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>🎮</span>
+                        <h2>任务控制</h2>
+                    </div>
+                    <div class="panel-body">
+                        <!-- AI任务输入 -->
+                        <div class="control-section">
+                            <div class="section-title">
+                                <span>🤖</span>
+                                <span>AI 测试需求</span>
+                            </div>
+                            <div class="input-group">
+                                <textarea id="taskInput" placeholder="请用自然语言描述测试需求，例如：
+测试发动机在1500到4000转，每500转一个点，全负荷特性，每个点测量30秒，记录排放和燃烧数据..."></textarea>
+                            </div>
+                            <div class="preset-tags">
+                                <span class="preset-tag" onclick="setPreset('fullLoad')">全负荷特性</span>
+                                <span class="preset-tag" onclick="setPreset('partLoad')">部分负荷</span>
+                                <span class="preset-tag" onclick="setPreset('emission')">排放测试</span>
+                                <span class="preset-tag" onclick="setPreset('transient')">瞬态测试</span>
+                            </div>
+                        </div>
+
+                        <!-- 控制按钮 -->
+                        <div class="control-section">
+                            <button class="btn btn-primary" id="startBtn" onclick="startTask()">
+                                <span>▶</span>
+                                <span>启动AI测试任务</span>
+                            </button>
+                            <button class="btn btn-danger" id="stopBtn" onclick="stopTask()" disabled style="margin-top: 10px;">
+                                <span>⏹</span>
+                                <span>紧急停止</span>
+                            </button>
+                        </div>
+
+                        <!-- 进度显示 -->
+                        <div class="control-section" id="progressSection" style="display: none;">
+                            <div class="section-title">
+                                <span>📊</span>
+                                <span>执行进度</span>
+                            </div>
+                            <div class="progress-section">
+                                <div class="progress-header">
+                                    <span id="progressText">准备中...</span>
+                                    <span id="progressPercent">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill"></div>
+                                </div>
+                            </div>
+                            <div id="currentOperation" style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 10px;">
+                                等待启动...
+                            </div>
+                        </div>
+
+                        <!-- 测试计划预览 -->
+                        <div class="control-section" id="planPreview" style="display: none;">
+                            <div class="section-title">
+                                <span>📋</span>
+                                <span>AI解析的测试计划</span>
+                            </div>
+                            <div id="planContent" style="background: var(--bg-panel); padding: 15px; border-radius: 8px; font-size: 0.9rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系统日志 -->
+                <div class="panel" style="margin-top: 20px;">
+                    <div class="panel-header">
+                        <span>📜</span>
+                        <h2>系统日志</h2>
+                    </div>
+                    <div class="panel-body" style="padding: 0;">
+                        <div class="log-container" id="logContainer">
+                            <div class="log-entry info">
+                                <span class="log-time">[系统]</span>
+                                <span>等待连接...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧数据面板 -->
+            <div class="right-panel">
+                <!-- 实时指标 -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>📈</span>
+                        <h2>实时监控</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="metrics-grid">
+                            <div class="metric-card" id="cardSpeed">
+                                <div class="metric-label">
+                                    <span>⚡</span>
+                                    <span>发动机转速</span>
+                                </div>
+                                <div>
+                                    <span class="metric-value" id="metricSpeed">--</span>
+                                    <span class="metric-unit">RPM</span>
+                                </div>
+                                <div class="metric-trend" id="trendSpeed">
+                                    <span>-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card" id="cardTorque">
+                                <div class="metric-label">
+                                    <span>🔧</span>
+                                    <span>扭矩</span>
+                                </div>
+                                <div>
+                                    <span class="metric-value" id="metricTorque">--</span>
+                                    <span class="metric-unit">Nm</span>
+                                </div>
+                                <div class="metric-trend" id="trendTorque">
+                                    <span>-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card" id="cardTemp">
+                                <div class="metric-label">
+                                    <span>🌡️</span>
+                                    <span>排气温度</span>
+                                </div>
+                                <div>
+                                    <span class="metric-value" id="metricTemp">--</span>
+                                    <span class="metric-unit">°C</span>
+                                </div>
+                                <div class="metric-trend" id="trendTemp">
+                                    <span>-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card" id="cardLambda">
+                                <div class="metric-label">
+                                    <span>⚗️</span>
+                                    <span>空燃比 Lambda</span>
+                                </div>
+                                <div>
+                                    <span class="metric-value" id="metricLambda">--</span>
+                                    <span class="metric-unit">-</span>
+                                </div>
+                                <div class="metric-trend" id="trendLambda">
+                                    <span>-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card" id="cardNOx">
+                                <div class="metric-label">
+                                    <span>💨</span>
+                                    <span>NOx 排放</span>
+                                </div>
+                                <div>
+                                    <span class="metric-value" id="metricNOx">--</span>
+                                    <span class="metric-unit">ppm</span>
+                                </div>
+                                <div class="metric-trend" id="trendNOx">
+                                    <span>-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-card" id="cardStatus">
+                                <div class="metric-label">
+                                    <span>🎯</span>
+                                    <span>系统状态</span>
+                                </div>
+                                <div>
+                                    <span class="metric-value" id="metricStatus" style="font-size: 1.2rem;">待机</span>
+                                </div>
+                                <div class="metric-trend" id="trendStatus">
+                                    <span>等待指令</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 实时图表 -->
+                        <div class="chart-container">
+                            <canvas id="realtimeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 测试结果 -->
+                <div class="panel results-panel" id="resultsPanel" style="display: none;">
+                    <div class="panel-header">
+                        <span>✅</span>
+                        <h2>测试结果</h2>
+                    </div>
+                    <div class="panel-body">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>序号</th>
+                                    <th>转速 (RPM)</th>
+                                    <th>扭矩 (Nm)</th>
+                                    <th>持续时间</th>
+                                    <th>测量文件</th>
+                                    <th>INCA数据</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // ==================== 全局配置 ====================
+        const config = {
+            cameoHost: 'localhost',
+            pumaHost: '192.168.1.101',
+            incaHost: 'localhost',
+            wsPort: 8000,
+            clientId: 'web_' + Math.random().toString(36).substr(2, 9)
+        };
+
+        let ws = null;
+        let isRunning = false;
+        let chart = null;
+        let reconnectTimer = null;
+        let currentTask = null;
+
+        // 历史数据缓存
+        const historyData = {
+            labels: [],
+            speed: [],
+            torque: [],
+            temp: [],
+            maxPoints: 100
+        };
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            loadConfig();
+            connectWebSocket();
+            updateSystemStatus();
+        });
+
+        // ==================== 图表初始化 ====================
+        function initChart() {
+            const ctx = document.getElementById('realtimeChart').getContext('2d');
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '转速 (RPM)',
+                            data: [],
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '扭矩 (Nm)',
+                            data: [],
+                            borderColor: '#4ade80',
+                            backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: '排温 (°C)',
+                            data: [],
+                            borderColor: '#fb923c',
+                            backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            yAxisID: 'y2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8', maxTicksLimit: 10 },
+                            grid: { color: '#334155' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { color: '#60a5fa' },
+                            grid: { color: '#334155' },
+                            title: { display: true, text: '转速 (RPM)', color: '#60a5fa' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#4ade80' },
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: '扭矩 (Nm)', color: '#4ade80' }
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#fb923c' },
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: '温度 (°C)', color: '#fb923c' }
+                        }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+        }
+
+        // ==================== WebSocket连接 ====================
+        function connectWebSocket() {
+            if (ws) {
+                ws.close();
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.hostname}:${config.wsPort}/ws/${config.clientId}`;
+            
+            updateStatus('wsDot', 'connecting');
+            log('正在连接服务器...', 'info');
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                updateStatus('wsDot', 'connected');
+                log('WebSocket连接成功', 'success');
+                
+                // 订阅数据频道
+                ws.send(JSON.stringify({ action: 'subscribe', channel: 'realtime_data' }));
+                ws.send(JSON.stringify({ action: 'subscribe', channel: 'safety_alerts' }));
+                ws.send(JSON.stringify({ action: 'subscribe', channel: 'task_status' }));
+                ws.send(JSON.stringify({ action: 'subscribe', channel: 'inca_data' }));
+                
+                // 获取系统状态
+                fetchSystemStatus();
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    handleWebSocketMessage(msg);
+                } catch (e) {
+                    console.error('消息解析错误:', e);
+                }
+            };
+
+            ws.onclose = () => {
+                updateStatus('wsDot', 'disconnected');
+                updateStatus('cameoDot', 'disconnected');
+                updateStatus('pumaDot', 'disconnected');
+                updateStatus('incaDot', 'disconnected');
+                log('连接断开，5秒后重连...', 'warning');
+                
+                reconnectTimer = setTimeout(connectWebSocket, 5000);
+            };
+
+            ws.onerror = (error) => {
+                log('WebSocket错误', 'error');
+                console.error(error);
+            };
+        }
+
+        // ==================== 消息处理 ====================
+        function handleWebSocketMessage(msg) {
+            // 实时数据更新
+            if (msg.engine_speed !== undefined) {
+                updateRealtimeData(msg);
+            }
+
+            // 安全警报
+            if (msg.level && msg.message) {
+                showAlert(msg.message, msg.level);
+                log(`[安全] ${msg.message}`, msg.level === 'critical' ? 'error' : 'warning', 'safety');
+            }
+
+            // 任务状态
+            if (msg.type) {
+                handleTaskMessage(msg);
+            }
+        }
+
+        function updateRealtimeData(data) {
+            // 更新指标卡片
+            updateMetric('Speed', data.engine_speed, 'RPM');
+            updateMetric('Torque', data.engine_torque, 'Nm');
+            updateMetric('Temp', data.exhaust_temp, '°C');
+            updateMetric('Lambda', data.lambda_val, '');
+            updateMetric('NOx', data.nox_ppm || 0, 'ppm');
+
+            // 更新图表数据
+            const now = new Date().toLocaleTimeString();
+            
+            historyData.labels.push(now);
+            historyData.speed.push(data.engine_speed);
+            historyData.torque.push(data.engine_torque);
+            historyData.temp.push(data.exhaust_temp);
+
+            // 限制数据点数量
+            if (historyData.labels.length > historyData.maxPoints) {
+                historyData.labels.shift();
+                historyData.speed.shift();
+                historyData.torque.shift();
+                historyData.temp.shift();
+            }
+
+            // 更新图表
+            chart.data.labels = historyData.labels;
+            chart.data.datasets[0].data = historyData.speed;
+            chart.data.datasets[1].data = historyData.torque;
+            chart.data.datasets[2].data = historyData.temp;
+            chart.update('none');
+
+            // 安全状态检查
+            const cards = {
+                'cardTemp': data.exhaust_temp > 800 ? (data.exhaust_temp > 850 ? 'critical' : 'warning') : '',
+                'cardLambda': data.lambda_val < 0.8 || data.lambda_val > 1.3 ? 'warning' : ''
+            };
+
+            Object.entries(cards).forEach(([id, status]) => {
+                const card = document.getElementById(id);
+                card.className = 'metric-card ' + status;
+            });
+        }
+
+        function updateMetric(name, value, unit) {
+            const el = document.getElementById('metric' + name);
+            if (el && value !== undefined) {
+                const oldVal = parseFloat(el.textContent) || 0;
+                el.textContent = typeof value === 'number' ? value.toFixed(name === 'Lambda' ? 2 : 0) : value;
+                
+                // 更新趋势
+                const trendEl = document.getElementById('trend' + name);
+                if (trendEl && typeof value === 'number') {
+                    const diff = value - oldVal;
+                    if (Math.abs(diff) > 0.1) {
+                        trendEl.innerHTML = diff > 0 ? 
+                            '<span class="trend-up">↑ 上升</span>' : 
+                            '<span class="trend-down">↓ 下降</span>';
+                    }
+                }
+            }
+        }
+
+        function handleTaskMessage(msg) {
+            switch(msg.type) {
+                case 'cameo_setup':
+                    log(`[CAMEO] ${msg.message}`, 'info', 'cameo');
+                    updateProgress(10, 'CAMEO自动搭建试验程序...');
+                    break;
+                    
+                case 'point_change':
+                    log(`[PUMA] 切换工况: ${msg.target.speed}rpm @ ${msg.target.torque}Nm`, 'info', 'puma');
+                    updateProgress(null, `切换至 ${msg.target.speed}rpm...`);
+                    break;
+                    
+                case 'stabilized':
+                    log(`[PUMA] 工况稳定: ${msg.point.speed}rpm`, 'success', 'puma');
+                    updateProgress(null, '工况已稳定，开始测量...');
+                    break;
+                    
+                case 'point_completed':
+                    addResultRow(msg);
+                    const percent = Math.round(((msg.index + 1) / msg.total) * 100);
+                    updateProgress(percent, `已完成 ${msg.index + 1}/${msg.total} 个工况点`);
+                    break;
+                    
+                case 'inca_data':
+                    log(`[INCA] 标定数据已同步: ${Object.keys(msg.data || {}).length} 个变量`, 'info', 'inca');
+                    break;
+                    
+                case 'task_complete':
+                    isRunning = false;
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                    updateProgress(100, '测试完成');
+                    log('测试任务全部完成', 'success');
+                    showAlert('测试任务已完成！', 'success');
+                    break;
+                    
+                case 'error':
+                    log(`[错误] ${msg.message}`, 'error');
+                    showAlert(msg.message, 'critical');
+                    break;
+            }
+        }
+
+        // ==================== 任务控制 ====================
+        async function startTask() {
+            const description = document.getElementById('taskInput').value.trim();
+            if (!description) {
+                showAlert('请输入测试需求描述', 'warning');
+                return;
+            }
+
+            // 模拟AI解析（实际应调用后端API）
+            const plan = parseTestPlan(description);
+            showPlanPreview(plan);
+
+            // 显示进度区域
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultsPanel').style.display = 'block';
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            isRunning = true;
+
+            log('[AI] 解析测试需求...', 'info', 'ai');
+            log(`[AI] 生成测试计划: ${plan.points.length} 个工况点`, 'info', 'ai');
+
+            // 模拟发送任务到后端
+            setTimeout(() => {
+                log('[系统] 任务已提交到执行队列', 'success');
+                simulateTaskExecution(plan);
+            }, 1000);
+        }
+
+        function parseTestPlan(description) {
+            // 简单的自然语言解析逻辑
+            const plan = {
+                name: `Test_${Date.now()}`,
+                engine_model: 'Diesel_2.0L',
+                points: [],
+                safety_limits: { max_exhaust_temp: 850, max_torque: 500, min_lambda: 0.8 },
+                inca_variables: ['InjectionTiming', 'RailPressure', 'EGRRate', 'LambdaSetpoint']
+            };
+
+            // 解析转速范围
+            const speedMatch = description.match(/(\d+)\s*到\s*(\d+)\s*转/);
+            if (speedMatch) {
+                const start = parseInt(speedMatch[1]);
+                const end = parseInt(speedMatch[2]);
+                const step = description.includes('每500') ? 500 : 250;
+                
+                for (let speed = start; speed <= end; speed += step) {
+                    plan.points.push({
+                        speed: speed,
+                        torque: description.includes('全负荷') ? 400 : 200,
+                        duration: 30,
+                        stabilization: 30
+                    });
+                }
+            } else {
+                // 默认测试点
+                plan.points = [
+                    { speed: 1500, torque: 400, duration: 30, stabilization: 30 },
+                    { speed: 2000, torque: 400, duration: 30, stabilization: 30 },
+                    { speed: 2500, torque: 400, duration: 30, stabilization: 30 },
+                    { speed: 3000, torque: 400, duration: 30, stabilization: 30 },
+                    { speed: 3500, torque: 400, duration: 30, stabilization: 30 },
+                    { speed: 4000, torque: 400, duration: 30, stabilization: 30 }
+                ];
+            }
+
+            return plan;
+        }
+
+        function showPlanPreview(plan) {
+            const preview = document.getElementById('planPreview');
+            const content = document.getElementById('planContent');
+            
+            const html = `
+                <div style="margin-bottom: 10px;"><strong>发动机型号:</strong> ${plan.engine_model}</div>
+                <div style="margin-bottom: 10px;"><strong>测试点数:</strong> ${plan.points.length} 个</div>
+                <div style="margin-bottom: 10px;"><strong>转速范围:</strong> ${plan.points[0].speed} - ${plan.points[plan.points.length-1].speed} RPM</div>
+                <div style="margin-bottom: 10px;"><strong>测量变量:</strong> ${plan.inca_variables.join(', ')}</div>
+                <div><strong>安全限制:</strong> 排温≤${plan.safety_limits.max_exhaust_temp}°C, 扭矩≤${plan.safety_limits.max_torque}Nm</div>
+            `;
+            
+            content.innerHTML = html;
+            preview.style.display = 'block';
+        }
+
+        function simulateTaskExecution(plan) {
+            // 模拟任务执行过程
+            let currentIndex = 0;
+            
+            function executeNextPoint() {
+                if (!isRunning || currentIndex >= plan.points.length) {
+                    if (isRunning) {
+                        handleTaskMessage({ type: 'task_complete' });
+                    }
+                    return;
+                }
+
+                const point = plan.points[currentIndex];
+                
+                // 发送工况切换消息
+                handleTaskMessage({
+                    type: 'point_change',
+                    target: point
+                });
+
+                // 模拟工况切换过程
+                let stableTime = 0;
+                const stableInterval = setInterval(() => {
+                    if (!isRunning) {
+                        clearInterval(stableInterval);
+                        return;
+                    }
+
+                    // 模拟实时数据
+                    const progress = stableTime / 10; // 10步达到稳定
+                    const currentSpeed = point.speed + (Math.random() - 0.5) * 20 * (1 - progress);
+                    const currentTorque = point.torque + (Math.random() - 0.5) * 10 * (1 - progress);
+                    
+                    updateRealtimeData({
+                        engine_speed: currentSpeed,
+                        engine_torque: currentTorque,
+                        exhaust_temp: 400 + (point.torque / 500) * 300 + Math.random() * 20,
+                        lambda_val: 1.0 + (Math.random() - 0.5) * 0.1,
+                        nox_ppm: 150 + Math.random() * 50
+                    });
+
+                    stableTime++;
+                    
+                    if (stableTime >= 10) {
+                        clearInterval(stableInterval);
+                        
+                        // 发送稳定消息
+                        handleTaskMessage({
+                            type: 'stabilized',
+                            point: point
+                        });
+
+                        // 模拟测量过程
+                        setTimeout(() => {
+                            // 发送完成消息
+                            handleTaskMessage({
+                                type: 'point_completed',
+                                index: currentIndex,
+                                total: plan.points.length,
+                                data: {
+                                    point: point,
+                                    measurement_file: `measurement_${point.speed}rpm_${Date.now()}.mdf`,
+                                    inca_data: {
+                                        InjectionTiming: 15.5 + Math.random(),
+                                        RailPressure: 1200 + Math.random() * 100,
+                                        EGRRate: 15 + Math.random() * 5
+                                    }
+                                }
+                            });
+
+                            currentIndex++;
+                            setTimeout(executeNextPoint, 1000);
+                        }, point.duration * 100); // 加速模拟
+                    }
+                }, 200);
+            }
+
+            // 开始执行
+            handleTaskMessage({ type: 'cameo_setup', message: '正在自动配置测量通道和试验序列...' });
+            setTimeout(executeNextPoint, 2000);
+        }
+
+        function stopTask() {
+            if (!confirm('确定要紧急停止当前任务吗？这将立即中断测试并保存已收集的数据。')) {
+                return;
+            }
+            
+            isRunning = false;
+            log('[系统] 紧急停止已触发！', 'error', 'safety');
+            showAlert('任务已紧急停止', 'critical');
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            updateProgress(0, '已停止');
+        }
+
+        // ==================== 结果显示 ====================
+        function addResultRow(msg) {
+            const tbody = document.getElementById('resultsTable');
+            const row = document.createElement('tr');
+            const data = msg.data;
+            
+            row.innerHTML = `
+                <td>${msg.index + 1}</td>
+                <td>${data.point.speed}</td>
+                <td>${data.point.torque}</td>
+                <td>${data.point.duration}s</td>
+                <td><code>${data.measurement_file}</code></td>
+                <td>
+                    <div style="font-size: 0.8rem;">
+                        IT: ${data.inca_data.InjectionTiming.toFixed(2)}°<br>
+                        RP: ${data.inca_data.RailPressure.toFixed(0)}bar<br>
+                        EGR: ${data.inca_data.EGRRate.toFixed(1)}%
+                    </div>
+                </td>
+                <td><span class="badge badge-completed">完成</span></td>
+                <td>
+                    <button class="btn btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onclick="downloadData('${data.measurement_file}')">
+                        下载
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        }
+
+        function downloadData(filename) {
+            log(`[系统] 准备下载: ${filename}`, 'info');
+            showAlert('数据下载功能需要后端支持', 'warning');
+        }
+
+        // ==================== 辅助功能 ====================
+        function updateProgress(percent, text) {
+            if (percent !== null) {
+                document.getElementById('progressFill').style.width = percent + '%';
+                document.getElementById('progressPercent').textContent = percent + '%';
+            }
+            if (text) {
+                document.getElementById('progressText').textContent = text;
+                document.getElementById('currentOperation').textContent = text;
+            }
+        }
+
+        function updateStatus(id, status) {
+            const dot = document.getElementById(id);
+            dot.className = 'status-dot ' + status;
+        }
+
+        function showAlert(message, level = 'warning') {
+            const banner = document.getElementById('alertBanner');
+            const content = document.getElementById('alertContent');
+            
+            content.textContent = message;
+            banner.className = 'alert-banner ' + level + ' show';
+            
+            setTimeout(() => {
+                banner.classList.remove('show');
+            }, 5000);
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBanner').classList.remove('show');
+        }
+
+        function log(message, type = 'info', tag = '') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            const tagHtml = tag ? `<span class="log-tag ${tag}">${tag.toUpperCase()}</span>` : '';
+            
+            entry.innerHTML = `<span class="log-time">[${time}]</span>${tagHtml}${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            
+            // 限制日志条目数
+            while (container.children.length > 100) {
+                container.removeChild(container.firstChild);
+            }
+        }
+
+        // ==================== 配置管理 ====================
+        function toggleConfig() {
+            const modal = document.getElementById('configModal');
+            modal.classList.toggle('show');
+        }
+
+        function loadConfig() {
+            const saved = localStorage.getItem('aiEngineConfig');
+            if (saved) {
+                Object.assign(config, JSON.parse(saved));
+                document.getElementById('cameoHost').value = config.cameoHost;
+                document.getElementById('pumaHost').value = config.pumaHost;
+                document.getElementById('incaHost').value = config.incaHost;
+                document.getElementById('wsPort').value = config.wsPort;
+            }
+        }
+
+        function saveConfig() {
+            config.cameoHost = document.getElementById('cameoHost').value;
+            config.pumaHost = document.getElementById('pumaHost').value;
+            config.incaHost = document.getElementById('incaHost').value;
+            config.wsPort = parseInt(document.getElementById('wsPort').value);
+            
+            localStorage.setItem('aiEngineConfig', JSON.stringify(config));
+            toggleConfig();
+            log('配置已保存，重新连接...', 'info');
+            connectWebSocket();
+        }
+
+        // ==================== 预设模板 ====================
+        function setPreset(type) {
+            const templates = {
+                fullLoad: '测试发动机在1500到4000转，每500转一个点，全负荷特性（最大扭矩），每个点测量30秒，记录排放和燃烧数据',
+                partLoad: '测试发动机在1500到3500转，部分负荷（50%扭矩），每250转一个点，每个点测量20秒，重点关注燃油经济性',
+                emission: '执行WLTC排放测试循环，记录NOx、HC、CO和颗粒物排放，同步采集燃烧参数',
+                transient: '执行瞬态响应测试：从1500转急加速到4000转，记录响应时间和超调量，测量涡轮迟滞'
+            };
+            
+            document.getElementById('taskInput').value = templates[type] || '';
+        }
+
+        // ==================== API调用 ====================
+        async function fetchSystemStatus() {
+            try {
+                const response = await fetch(`/api/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('cameoDot', data.cameo === 'connected' ? 'connected' : 'disconnected');
+                    updateStatus('pumaDot', data.puma === 'connected' ? 'connected' : 'disconnected');
+                    updateStatus('incaDot', data.inca === 'connected' ? 'connected' : 'disconnected');
+                }
+            } catch (e) {
+                console.error('获取状态失败:', e);
+            }
+        }
+
+        function updateSystemStatus() {
+            // 定期更新系统状态
+            setInterval(fetchSystemStatus, 5000);
+        }
+    </script>
+</body>
+</html>
